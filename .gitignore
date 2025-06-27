@@ -192,3 +192,25 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Project specific - Advanced RAG AI
+model_cache/
+vector_db/
+uploaded_documents/
+*.index
+*.pkl
+
+# Streamlit cache
+.streamlit/
+
+# Model files
+*.bin
+*.safetensors
+
+# Document processing temp files
+temp_docs/
+
+# Vector database files
+faiss_index.idx
+documents.pkl
+metadata.pkl
