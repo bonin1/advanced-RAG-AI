@@ -56,7 +56,9 @@ class LLMManager:
                 torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
                 device_map="auto" if self.device == "cuda" else None,
                 quantization_config=quantization_config,
-                trust_remote_code=True
+                trust_remote_code=True,
+                low_cpu_mem_usage=True,  # Optimize memory usage
+                use_flash_attention_2=False  # Disable for compatibility
             )
             
             # Load embedding model
@@ -78,6 +80,8 @@ class LLMManager:
             raise ValueError("Models not loaded. Call load_models() first.")
         
         try:
+            logger.info(f"Generating response for prompt length: {len(prompt)} chars")
+            
             # Tokenize input
             inputs = self.tokenizer(
                 prompt,
@@ -86,6 +90,8 @@ class LLMManager:
                 max_length=4096 - max_new_tokens,
                 padding=True
             ).to(self.device)
+            
+            logger.info(f"Input tokens: {inputs['input_ids'].shape[1]}")
             
             # Generate response
             with torch.no_grad():
@@ -97,13 +103,23 @@ class LLMManager:
                     do_sample=True,
                     pad_token_id=self.tokenizer.eos_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
+                    repetition_penalty=1.1,  # Reduce repetition
+                    use_cache=True,  # Use key-value cache for speed
+                    stopping_criteria=None  # Let it generate naturally
                 )
+            
+            logger.info(f"Generated tokens: {outputs.shape[1]}")
             
             # Decode response
             response = self.tokenizer.decode(
                 outputs[0][inputs['input_ids'].shape[1]:],
                 skip_special_tokens=True
             ).strip()
+            
+            # Clean up response - remove any remaining special tokens
+            response = response.replace("<|im_end|>", "").strip()
+            
+            logger.info(f"Response length: {len(response)} chars")
             
             return response
             
@@ -131,13 +147,15 @@ class LLMManager:
         """Create a RAG prompt with context and question."""
         context = "\n\n".join([f"Context {i+1}:\n{chunk}" for i, chunk in enumerate(context_chunks)])
         
-        prompt = f"""<s>[INST] You are a helpful AI assistant. Answer the question based ONLY on the provided context. If the answer cannot be found in the context, say "I cannot find the answer in the provided documents."
-
+        # OpenHermes format (ChatML style)
+        prompt = f"""<|im_start|>system
+You are a helpful AI assistant. Answer the question based ONLY on the provided context. If the answer cannot be found in the context, say "I cannot find the answer in the provided documents."<|im_end|>
+<|im_start|>user
 Context:
 {context}
 
-Question: {question}
-
-Please provide a clear, accurate answer based solely on the information in the context above. [/INST]"""
+Question: {question}<|im_end|>
+<|im_start|>assistant
+"""
         
         return prompt

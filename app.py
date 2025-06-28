@@ -49,7 +49,6 @@ st.markdown("""
         margin: 1rem 0;
     }
     .source-box {
-        background-color: #f8f9fa;
         border-left: 4px solid #667eea;
         padding: 1rem;
         margin: 0.5rem 0;

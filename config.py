@@ -13,8 +13,8 @@ UPLOAD_DIR = "uploaded_documents"
 ALLOWED_EXTENSIONS = [".pdf", ".docx", ".txt"]
 
 # LLM settings
-MAX_NEW_TOKENS = 512
-TEMPERATURE = 0.1
+MAX_NEW_TOKENS = 1024
+TEMPERATURE = 0.7
 TOP_P = 0.9
 
 # Cache settings
